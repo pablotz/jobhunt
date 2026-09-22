@@ -1,5 +1,7 @@
 """JobHunt MX — configuration."""
+import os
 import sqlite3
+from pathlib import Path
 
 DB = "jobs.db"
 PROFILES_DIR = "profiles"   # one <name>.txt per person (uploaded via the UI)
@@ -46,6 +48,16 @@ CREATE TABLE IF NOT EXISTS judgments (
   jev_skill REAL, jev_seniority REAL, jev_english REAL, jev_remote REAL,
   fit REAL, PRIMARY KEY (job_id, profile)
 )"""
+
+
+def load_env():
+    for line in Path(".env").read_text().splitlines() if Path(".env").exists() else []:
+        if "=" in line and not line.startswith("#"):
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.strip(), v.strip())
+
+
+load_env()
 
 
 def init_db(path=DB):

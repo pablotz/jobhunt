@@ -30,7 +30,7 @@ with st.sidebar:
     if not profiles:
         st.warning("Sube un CV para empezar 👆")
         st.stop()
-    profile = st.selectbox("Perfil", profiles, index=len(profiles) - 1)
+    profile = profiles[-1]
 
     if st.button("🔄 Actualizar vacantes", type="primary"):
         with st.spinner("Buscando y puntuando (puede tardar unos minutos)..."):
