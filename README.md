@@ -7,18 +7,26 @@ Buscador de vacantes en **Indeed, LinkedIn y Google Jobs (México)** que ordena 
 ```bash
 git clone https://github.com/pablotz/jobhunt.git
 cd jobhunt
-python3 -m venv .venv      # Ubuntu/Debian: si falla, primero `sudo apt install python3-venv`
-source .venv/bin/activate
+python -m venv .venv
+# Linux/macOS:  source .venv/bin/activate
+# Windows (cmd): .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ## Uso
 
+Crea un archivo `.env` en la raíz con tu clave, o expórtala en tu terminal:
+
 ```bash
-export TYPESAFE_API_KEY=tu_key   # gratis en https://console.typesafe.ai
+# .env (todas las plataformas)
+TYPESAFE_API_KEY=tu_key   # gratis en https://console.typesafe.ai
+```
+```bash
+# o como variable de entorno
+# Linux/macOS: export TYPESAFE_API_KEY=tu_key
+# Windows (PowerShell): $env:TYPESAFE_API_KEY="tu_key"
 streamlit run app.py
 ```
-(o también crea un archivo `.env` en la raíz con `TYPESAFE_API_KEY=tu_key`; la app lo carga sola).
 
 1. **Sube tu CV (PDF)** en la barra lateral — crea tu perfil automáticamente.
 2. Pulsa **🔄 Actualizar vacantes** — busca y puntúa (tarda unos minutos).
