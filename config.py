@@ -4,9 +4,11 @@ import sqlite3
 import sys
 from pathlib import Path
 
-if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 DB = "jobs.db"
 PROFILES_DIR = "profiles"   # one <name>.txt per person (uploaded via the UI)
