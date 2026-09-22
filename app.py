@@ -20,7 +20,7 @@ with st.sidebar:
     if up:
         name = Path(up.name).stem
         text = "\n".join(p.extract_text() or "" for p in PdfReader(up).pages)
-        Path(PROFILES_DIR, f"{name}.txt").write_text(text)
+        Path(PROFILES_DIR, f"{name}.txt").write_text(text, encoding="utf-8")
         st.success(f"Perfil '{name}' listo")
         if Path("jobs.db").exists():
             with st.spinner(f"Puntuando vacantes para {name}..."):

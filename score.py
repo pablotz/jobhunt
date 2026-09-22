@@ -130,7 +130,7 @@ def jev_fit(con, rows, cv, profile):
 
 def main():
     profile = get_profile(sys.argv[1] if len(sys.argv) > 1 else None)
-    cv = Path(PROFILES_DIR, f"{profile}.txt").read_text()
+    cv = Path(PROFILES_DIR, f"{profile}.txt").read_text(encoding="utf-8")
     keywords = derive_keywords(cv)
 
     con = init_db()

@@ -1,7 +1,12 @@
 """JobHunt MX — configuration."""
 import os
 import sqlite3
+import sys
 from pathlib import Path
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 
 DB = "jobs.db"
 PROFILES_DIR = "profiles"   # one <name>.txt per person (uploaded via the UI)
@@ -51,7 +56,7 @@ CREATE TABLE IF NOT EXISTS judgments (
 
 
 def load_env():
-    for line in Path(".env").read_text().splitlines() if Path(".env").exists() else []:
+    for line in Path(".env").read_text(encoding="utf-8").splitlines() if Path(".env").exists() else []:
         if "=" in line and not line.startswith("#"):
             k, _, v = line.partition("=")
             os.environ.setdefault(k.strip(), v.strip())
