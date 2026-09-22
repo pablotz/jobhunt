@@ -18,6 +18,7 @@ pip install -r requirements.txt
 export TYPESAFE_API_KEY=tu_key   # gratis en https://console.typesafe.ai
 streamlit run app.py
 ```
+(o también crea un archivo `.env` en la raíz con `TYPESAFE_API_KEY=tu_key`; la app lo carga sola).
 
 1. **Sube tu CV (PDF)** en la barra lateral — crea tu perfil automáticamente.
 2. Pulsa **🔄 Actualizar vacantes** — busca y puntúa (tarda unos minutos).
