@@ -48,3 +48,15 @@ Cada persona que use la app sube su propio CV; los puntajes se guardan por perfi
 ## Datos
 
 Todo queda local: `jobs.db` (vacantes) y `profiles/` (CVs en texto) están en `.gitignore`.
+
+## Deploy (Streamlit Cloud)
+
+1. Sube el repo a GitHub y crea la app en [share.streamlit.io](https://share.streamlit.io) (main file: `app.py`).
+2. En **Settings → Secrets** de la app pega (nunca en el repo):
+
+```toml
+TYPESAFE_API_KEY = "tu_key"
+APP_PASSWORD = "la_contraseña_para_tus_amigos"
+```
+
+Sin `APP_PASSWORD` la app no pide contraseña (útil en local).

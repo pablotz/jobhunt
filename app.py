@@ -1,4 +1,5 @@
 """JobHunt MX UI. Run: streamlit run app.py"""
+import os
 import sqlite3
 import subprocess
 import sys
@@ -11,6 +12,12 @@ from pypdf import PdfReader
 from config import PROFILES_DIR, init_db
 
 st.set_page_config(page_title="JobHunt MX", layout="wide")
+
+# Password gate: enforced only when APP_PASSWORD is set (env or Streamlit Cloud secrets)
+_pw = os.environ.get("APP_PASSWORD")
+if _pw and st.text_input("Contraseña", type="password") != _pw:
+    st.stop()
+
 st.title("JobHunt MX")
 
 Path(PROFILES_DIR).mkdir(exist_ok=True)
