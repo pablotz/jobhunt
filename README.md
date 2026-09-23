@@ -28,13 +28,14 @@ TYPESAFE_API_KEY=tu_key   # gratis en https://console.typesafe.ai
 streamlit run app.py
 ```
 
-1. **Sube tu CV (PDF)** en la barra lateral — crea tu perfil automáticamente.
-2. Pulsa **🔄 Actualizar vacantes** — busca y puntúa (tarda unos minutos).
+1. Escribe **tu nombre** y un **PIN**, y **sube tu CV (PDF)** — crea tu perfil privado.
+2. La próxima vez entra con el mismo nombre y PIN: solo tú ves tus puntajes.
+3. Pulsa **🔄 Actualizar vacantes** — busca y puntúa (tarda unos minutos).
 
 Sin `TYPESAFE_API_KEY` la app funciona igual, pero el ranking usa solo palabras clave
 (con la key, Jev califica fit de skills y seniority por vacante).
 
-Cada persona que use la app sube su propio CV; los puntajes se guardan por perfil.
+Cada persona crea su perfil con nombre + PIN; los puntajes se guardan por perfil y nadie puede ver los de otra persona sin su PIN.
 
 ## Configuración (`config.py`)
 

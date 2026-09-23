@@ -1,4 +1,5 @@
 """JobHunt MX UI. Run: streamlit run app.py"""
+import hashlib
 import os
 import sqlite3
 import subprocess
@@ -22,33 +23,60 @@ st.title("JobHunt MX")
 
 Path(PROFILES_DIR).mkdir(exist_ok=True)
 
+
+def _pin_hash(name, pin):
+    return hashlib.sha256(f"{name}:{pin}".encode()).hexdigest()
+
+
 with st.sidebar:
-    up = st.file_uploader("Sube tu CV (PDF)", type=["pdf"])
-    if up:
-        name = Path(up.name).stem
-        text = "\n".join(p.extract_text() or "" for p in PdfReader(up).pages)
-        Path(PROFILES_DIR, f"{name}.txt").write_text(text, encoding="utf-8")
-        st.success(f"Perfil '{name}' listo")
-        if Path("jobs.db").exists():
-            with st.spinner(f"Puntuando vacantes para {name}..."):
-                subprocess.run([sys.executable, "score.py", name], check=False)
+    raw = st.text_input("Tu nombre")
+    name = Path(raw.strip()).name if raw.strip() else ""  # strip any path parts
+    pin = st.text_input("Tu PIN", type="password")
+    profile = None
 
-    profiles = sorted(p.stem for p in Path(PROFILES_DIR).glob("*.txt"))
-    if not profiles:
-        st.warning("Sube un CV para empezar 👆")
-        st.stop()
-    profile = profiles[-1]
+    if name:
+        cvf = Path(PROFILES_DIR, f"{name}.txt")
+        pinf = Path(PROFILES_DIR, f"{name}.pin")
+        if pinf.exists():
+            if not pin:
+                st.info("Escribe tu PIN")
+            elif _pin_hash(name, pin) != pinf.read_text().strip():
+                st.error("PIN incorrecto")
+            else:
+                profile = name
+        else:
+            st.info("Perfil nuevo: elige un PIN y sube tu CV 👇")
 
-    if st.button("🔄 Actualizar vacantes", type="primary"):
-        with st.spinner("Buscando y puntuando (puede tardar unos minutos)..."):
-            subprocess.run([sys.executable, "fetch.py"], check=False)
-            subprocess.run([sys.executable, "score.py", profile], check=False)
-        st.rerun()
+        if profile or not pinf.exists():  # logged in (CV update) or first upload
+            up = st.file_uploader("Sube tu CV (PDF)", type=["pdf"])
+            if up and not pin:
+                st.warning("Elige un PIN para guardar tu perfil")
+            if up and pin and st.session_state.get("_up") != (name, up.name, up.size):
+                st.session_state._up = (name, up.name, up.size)  # save only on new upload
+                text = "\n".join(p.extract_text() or "" for p in PdfReader(up).pages)
+                cvf.write_text(text, encoding="utf-8")
+                pinf.write_text(_pin_hash(name, pin), encoding="utf-8")
+                st.success(f"Perfil '{name}' listo")
+                profile = name
+                if Path("jobs.db").exists():
+                    with st.spinner(f"Puntuando vacantes para {name}..."):
+                        subprocess.run([sys.executable, "score.py", name], check=False)
 
-    salary_only = st.checkbox("Solo con sueldo publicado")
-    mod = st.selectbox("Modalidad", ["Todas", "Remoto", "Presencial/Híbrido"])
-    min_fit = st.slider("Fit mínimo (Jev)", 0.0, 1.0, 0.0, 0.05)
-    q = st.text_input("Buscar en título/descripción")
+    if profile:
+        if st.button("🔄 Actualizar vacantes", type="primary"):
+            with st.spinner("Buscando y puntuando (puede tardar unos minutos)..."):
+                subprocess.run([sys.executable, "fetch.py"], check=False)
+                subprocess.run([sys.executable, "score.py", profile], check=False)
+            st.rerun()
+
+        salary_only = st.checkbox("Solo con sueldo publicado")
+        mod = st.selectbox("Modalidad", ["Todas", "Remoto", "Presencial/Híbrido"])
+        min_fit = st.slider("Fit mínimo (Jev)", 0.0, 1.0, 0.0, 0.05)
+        q = st.text_input("Buscar en título/descripción")
+
+if not profile:
+    st.info("Escribe tu nombre y PIN en la barra lateral 👈 — si es tu primera vez, elige un PIN y sube tu CV.")
+    st.stop()
 
 con = init_db()
 df = pd.read_sql(
