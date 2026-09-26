@@ -112,7 +112,7 @@ if q:
 
 f = f.sort_values(["has_salary", "fit", "pscore"], ascending=False, na_position="last")
 st.caption(f"{len(f)} vacantes para **{profile}** · orden: con sueldo primero, luego por fit de Jev")
-st.dataframe(
+event = st.dataframe(
     f[["title", "company", "location", "sueldo", "fit", "jev_skill",
        "jev_seniority", "site", "date_posted", "job_url"]],
     column_config={
@@ -124,4 +124,19 @@ st.dataframe(
     hide_index=True,
     use_container_width=True,
     height=650,
+    on_select="rerun",
+    selection_mode="single-row",
 )
+
+if event and event.selection.rows:
+    j = f.iloc[event.selection.rows[0]]
+    with st.expander(f"Detalle: {j.title} — {j.company}", expanded=True):
+        cols = st.columns(4)
+        cols[0].metric("Sueldo", j.sueldo or "—")
+        cols[1].metric("Fit Jev", f"{j.fit:.2f}" if pd.notna(j.fit) else "—")
+        cols[2].metric("Skill", f"{j.jev_skill:.2f}" if pd.notna(j.jev_skill) else "—")
+        cols[3].metric("Seniority", f"{j.jev_seniority:.2f}" if pd.notna(j.jev_seniority) else "—")
+        st.caption(f"{j.site} · {j.location} · publicado {j.date_posted or '—'}")
+        st.write(f"**[Abrir vacante]({j.job_url})**")
+        desc = j.description or "(sin descripción)"
+        st.write(desc)

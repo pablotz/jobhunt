@@ -37,6 +37,7 @@ VOCAB = [
 
 # Jev: max jobs judged per profile per score run (top keyword scorers first)
 JEV_MAX_JOBS = 50
+JEV_PARALLEL = 5  # concurrent Jev requests per score run
 WEIGHT_SKILL = 0.7
 WEIGHT_SENIORITY = 0.3
 
@@ -47,7 +48,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   job_url TEXT UNIQUE, description TEXT,
   min_amount REAL, max_amount REAL, currency TEXT, interval TEXT,
   is_remote INTEGER, date_posted TEXT, fetched_at TEXT,
-  score REAL, has_salary INTEGER, salary_monthly_mxn REAL
+  score REAL, has_salary INTEGER, salary_monthly_mxn REAL,
+  dedupe_key TEXT
 );
 CREATE TABLE IF NOT EXISTS judgments (
   job_id INTEGER, profile TEXT,
@@ -73,6 +75,10 @@ def init_db(path=DB):
         con.execute(stmt)
     try:  # pre-multi-profile dbs: judgments exists without score column
         con.execute("ALTER TABLE judgments ADD COLUMN score REAL")
+    except sqlite3.OperationalError:
+        pass
+    try:  # pre-dedupe dbs: jobs exists without dedupe_key column
+        con.execute("ALTER TABLE jobs ADD COLUMN dedupe_key TEXT")
     except sqlite3.OperationalError:
         pass
     return con

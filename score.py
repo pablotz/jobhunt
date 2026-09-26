@@ -1,13 +1,14 @@
 """Score jobs for a profile: keyword pre-filter + salary parse + Jev fit.
 Run: python score.py [profile]  (defaults to the only profile if there's just one)"""
+import asyncio
 import os
 import re
 import sqlite3
 import sys
 from pathlib import Path
 
-from config import (JEV_MAX_JOBS, PROFILES_DIR, VOCAB, WEIGHT_SENIORITY,
-                    WEIGHT_SKILL, init_db)
+from config import (JEV_MAX_JOBS, JEV_PARALLEL, PROFILES_DIR, VOCAB,
+                    WEIGHT_SENIORITY, WEIGHT_SKILL, init_db)
 
 USD_TO_MXN = 20.0  # ponytail: fixed rate; bump when it drifts
 AMOUNT_RE = re.compile(
@@ -63,12 +64,12 @@ def get_profile(arg):
 
 
 def jev_fit(con, rows, cv, profile):
-    """Judge pre-filtered jobs with Jev: one request per job, 4 parallel questions.
-    ponytail: sequential requests; switch to AsyncTypeSafeClient if a run feels slow."""
+    """Judge pre-filtered jobs with Jev: one async request per job, batched
+    JEV_PARALLEL at a time via asyncio.gather."""
     if not os.environ.get("TYPESAFE_API_KEY"):
         print("TYPESAFE_API_KEY not set; skipping Jev (keyword scores only)")
         return 0
-    from typesafe_sdk import Noul, NoulCriteria, Score, TypeSafeClient
+    from typesafe_sdk import AsyncTypeSafeClient, Noul, NoulCriteria, Score
 
     questions = {
         "skill_fit": Score(
@@ -98,34 +99,44 @@ def jev_fit(con, rows, cv, profile):
             )),
     }
 
-    judged = 0
-    with TypeSafeClient() as client:
-        for jid, title, company, location, desc in rows:
-            state = {
-                "candidate_cv": cv,
-                "job": {"title": title, "company": company,
-                        "location": location, "description": desc[:6000]},
-            }
-            try:
-                r = client.system_one(model="jev-latest", state=state, questions=questions)
-                a = r.answers
-                skill = a["skill_fit"].score / 4
-                seniority = a["seniority_fit"].score / 3
-                fit = WEIGHT_SKILL * skill + WEIGHT_SENIORITY * seniority
-                con.execute(
-                    """INSERT INTO judgments
-                       (job_id, profile, jev_skill, jev_seniority, jev_english, jev_remote, fit)
-                       VALUES (?,?,?,?,?,?,?)
-                       ON CONFLICT(job_id, profile) DO UPDATE SET
-                       jev_skill=excluded.jev_skill, jev_seniority=excluded.jev_seniority,
-                       jev_english=excluded.jev_english, jev_remote=excluded.jev_remote,
-                       fit=excluded.fit""",
-                    (jid, profile, skill, seniority, a["requires_english"].noul,
-                     a["truly_remote"].noul, fit))
-                judged += 1
-            except Exception as e:
-                print(f"jev failed for job {jid} ({title}): {e}")
-    return judged
+    async def judge(client, row):
+        jid, title, company, location, desc = row
+        state = {
+            "candidate_cv": cv,
+            "job": {"title": title, "company": company,
+                    "location": location, "description": desc[:6000]},
+        }
+        r = await client.system_one(model="jev-latest", state=state, questions=questions)
+        return jid, r.answers
+
+    async def run():
+        judged = 0
+        async with AsyncTypeSafeClient() as client:
+            for i in range(0, len(rows), JEV_PARALLEL):
+                chunk = rows[i:i + JEV_PARALLEL]
+                results = await asyncio.gather(*(judge(client, r) for r in chunk),
+                                               return_exceptions=True)
+                for out in results:
+                    if isinstance(out, BaseException):
+                        continue
+                    jid, a = out
+                    skill = a["skill_fit"].score / 4
+                    seniority = a["seniority_fit"].score / 3
+                    fit = WEIGHT_SKILL * skill + WEIGHT_SENIORITY * seniority
+                    con.execute(
+                        """INSERT INTO judgments
+                           (job_id, profile, jev_skill, jev_seniority, jev_english, jev_remote, fit)
+                           VALUES (?,?,?,?,?,?,?)
+                           ON CONFLICT(job_id, profile) DO UPDATE SET
+                           jev_skill=excluded.jev_skill, jev_seniority=excluded.jev_seniority,
+                           jev_english=excluded.jev_english, jev_remote=excluded.jev_remote,
+                           fit=excluded.fit""",
+                        (jid, profile, skill, seniority, a["requires_english"].noul,
+                         a["truly_remote"].noul, fit))
+                    judged += 1
+        return judged
+
+    return asyncio.run(run())
 
 
 def main():
